@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emotion AI Web Test</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Emotion Recognition <span>AI</span></h1>
+            <p>Upload an image or use your webcam to detect facial emotions in real-time.</p>
+        </header>
+
+        <main>
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="webcam-tab">Webcam Live</button>
+                <button class="tab-btn" data-tab="upload-tab">File Upload</button>
+            </div>
+
+            <div class="tab-content active" id="webcam-tab">
+                <div class="video-container">
+                    <video id="videoElement" autoplay playsinline></video>
+                    <canvas id="overlayCanvas"></canvas>
+                </div>
+                <div class="controls">
+                    <button id="startWebcamBtn" class="primary-btn">Start Webcam</button>
+                    <button id="stopWebcamBtn" class="danger-btn" style="display: none;">Stop Webcam</button>
+                    <button id="flipCameraBtn" class="secondary-btn" style="margin-top: 0; display: none;">Flip Camera 🔄</button>
+                </div>
+            </div>
+
+            <div class="tab-content" id="upload-tab">
+                <div class="upload-container" id="dropZone">
+                    <input type="file" id="fileInput" accept="image/*" hidden>
+                    <div class="upload-content">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        <p>Click or drag image here to upload</p>
+                    </div>
+                </div>
+                <div class="preview-container" style="display: none;">
+                    <div class="image-wrapper">
+                        <img id="imagePreview" src="" alt="Preview">
+                        <canvas id="uploadCanvas"></canvas>
+                    </div>
+                    <button id="resetUploadBtn" class="secondary-btn">Try Another Image</button>
+                </div>
+            </div>
+            
+            <div id="resultsPanel" class="results-panel">
+                <h3>Detection Results</h3>
+                <div id="resultsContent">
+                    <p class="placeholder-text">Waiting for input...</p>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script src="/static/script.js"></script>
+</body>
+</html>
