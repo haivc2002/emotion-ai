@@ -2,10 +2,10 @@
 archive/
 
 # Các thư mục chứa model đã train
-models/
-*.h5
-*.tflite
-*.onnx
+# models/
+# *.h5
+# *.tflite
+# *.onnx
 
 # Python
 __pycache__/

@@ -82,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const dataUrl = tempCanvas.toDataURL('image/jpeg', 0.8);
 
         try {
-            const response = await fetch('/predict_base64', {
+            const response = await fetch('/predict', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ image: dataUrl })
@@ -190,7 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('resultsContent').innerHTML = '<p class="placeholder-text">Analyzing image...</p>';
 
         try {
-            const response = await fetch('/predict_upload', {
+            const response = await fetch('/predict', {
                 method: 'POST',
                 body: formData
             });
@@ -210,27 +210,59 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // --- Shared Drawing Logic ---
+    function getRenderedRect(containerWidth, containerHeight, intrinsicWidth, intrinsicHeight) {
+        const containerRatio = containerWidth / containerHeight;
+        const intrinsicRatio = intrinsicWidth / intrinsicHeight;
+        
+        let renderWidth, renderHeight, offsetX, offsetY;
+        
+        // object-fit: contain logic
+        if (intrinsicRatio > containerRatio) {
+            renderWidth = containerWidth;
+            renderHeight = containerWidth / intrinsicRatio;
+            offsetX = 0;
+            offsetY = (containerHeight - renderHeight) / 2;
+        } else {
+            renderHeight = containerHeight;
+            renderWidth = containerHeight * intrinsicRatio;
+            offsetX = (containerWidth - renderWidth) / 2;
+            offsetY = 0;
+        }
+        
+        return { width: renderWidth, height: renderHeight, x: offsetX, y: offsetY };
+    }
+
     function drawResults(faces, canvas, originalWidth, originalHeight, mirrored = false) {
         const ctx = canvas.getContext('2d');
+        
+        // Đồng bộ độ phân giải Canvas với kích thước thực tế hiển thị trên CSS
+        canvas.width = canvas.clientWidth;
+        canvas.height = canvas.clientHeight;
+        
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
         if (!faces || faces.length === 0) return;
 
-        // Xử lý scale nếu canvas bị thu nhỏ bởi CSS object-fit: contain
-        // Việc này hơi phức tạp vì object-fit: contain scale ảnh/video nhưng giữ tỷ lệ.
-        // Để đơn giản, CSS của chúng ta đặt width: 100% height: 100% object-fit: contain.
-        // Canvas overlay cũng phải match exactly. Do overlay được set w/h = videoWidth/videoHeight, 
-        // trình duyệt tự scale nó khớp với video.
+        // Tính toán tọa độ và tỉ lệ chuẩn xác của ảnh thực tế đang được vẽ bởi object-fit: contain
+        const rect = getRenderedRect(canvas.width, canvas.height, originalWidth, originalHeight);
+        const scaleX = rect.width / originalWidth;
+        const scaleY = rect.height / originalHeight;
         
         ctx.lineWidth = 3;
-        ctx.font = "bold 24px Inter, sans-serif";
+        ctx.font = "bold 16px Inter, sans-serif";
 
         faces.forEach(face => {
-            let [x, y, w, h] = face.box;
+            let [origX, origY, origW, origH] = face.box;
             
             if (mirrored) {
-                x = originalWidth - x - w;
+                origX = originalWidth - origX - origW;
             }
+            
+            // Map tọa độ gốc sang tọa độ trên màn hình (đã tính luôn phần viền đen letterbox)
+            const x = rect.x + (origX * scaleX);
+            const y = rect.y + (origY * scaleY);
+            const w = origW * scaleX;
+            const h = origH * scaleY;
             
             // Draw box
             ctx.strokeStyle = "#3b82f6";
@@ -240,11 +272,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const text = `${face.emotion} (${(face.confidence * 100).toFixed(1)}%)`;
             ctx.fillStyle = "#3b82f6";
             const textWidth = ctx.measureText(text).width;
-            ctx.fillRect(x, y - 30, textWidth + 10, 30);
+            ctx.fillRect(x, y - 24, textWidth + 10, 24);
             
             // Draw text
             ctx.fillStyle = "#ffffff";
-            ctx.fillText(text, x + 5, y - 8);
+            ctx.fillText(text, x + 5, y - 6);
         });
     }
 

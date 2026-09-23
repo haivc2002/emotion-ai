@@ -103,33 +103,52 @@ def process_image(img_array):
         
     return {"faces": results}
 
-@app.post("/predict_upload")
-async def predict_upload(file: UploadFile = File(...)):
-    contents = await file.read()
-    nparr = np.frombuffer(contents, np.uint8)
-    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-    
-    if img is None:
-        return JSONResponse(status_code=400, content={"error": "Invalid image"})
-        
-    results = process_image(img)
-    return JSONResponse(content=results)
+import urllib.request
 
-@app.post("/predict_base64")
-async def predict_base64(request: Request):
-    data = await request.json()
-    if 'image' not in data:
-         return JSONResponse(status_code=400, content={"error": "No image data"})
-         
-    image_data = data['image'].split(',')[1]
-    nparr = np.frombuffer(base64.b64decode(image_data), np.uint8)
-    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+@app.post("/predict")
+async def predict(request: Request):
+    content_type = request.headers.get("content-type", "")
+    img = None
     
-    if img is None:
-        return JSONResponse(status_code=400, content={"error": "Invalid image"})
+    try:
+        if "multipart/form-data" in content_type:
+            form = await request.form()
+            if "file" in form:
+                contents = await form["file"].read()
+                nparr = np.frombuffer(contents, np.uint8)
+                img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            elif "image" in form:
+                image_data = form["image"].split(',')[1] if ',' in form["image"] else form["image"]
+                nparr = np.frombuffer(base64.b64decode(image_data), np.uint8)
+                img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            elif "url" in form:
+                req = urllib.request.Request(form["url"], headers={'User-Agent': 'Mozilla/5.0'})
+                with urllib.request.urlopen(req) as response:
+                    contents = response.read()
+                nparr = np.frombuffer(contents, np.uint8)
+                img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+                
+        elif "application/json" in content_type:
+            data = await request.json()
+            if "image" in data:
+                image_data = data["image"].split(',')[1] if ',' in data["image"] else data["image"]
+                nparr = np.frombuffer(base64.b64decode(image_data), np.uint8)
+                img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            elif "url" in data:
+                req = urllib.request.Request(data["url"], headers={'User-Agent': 'Mozilla/5.0'})
+                with urllib.request.urlopen(req) as response:
+                    contents = response.read()
+                nparr = np.frombuffer(contents, np.uint8)
+                img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+                
+        if img is None:
+            return JSONResponse(status_code=400, content={"error": "Invalid request. Please provide 'file' (upload), 'image' (base64), or 'url'."})
+            
+        results = process_image(img)
+        return JSONResponse(content=results)
         
-    results = process_image(img)
-    return JSONResponse(content=results)
+    except Exception as e:
+        return JSONResponse(status_code=400, content={"error": f"Error processing request: {str(e)}"})
 
 if __name__ == "__main__":
     import uvicorn
